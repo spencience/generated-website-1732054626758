@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Spencience's Platformer - A Web3 Gaming Experience">
+<title>Spencience's Platformer</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
+</head>
+<body class="bg-gradient-to-r from-purple-900 to-blue-900 min-h-screen">
+<header class="p-4 bg-black/50 text-white">
+<nav class="container mx-auto flex justify-between items-center">
+<h1 class="text-2xl font-bold">$SPENCE Platform</h1>
+<div id="wallet-connect" class="px-4 py-2 bg-purple-600 rounded cursor-pointer hover:bg-purple-700">Connect Wallet</div>
+</nav>
+</header>
+<main class="container mx-auto p-4">
+<div id="game-container" class="flex justify-center">
+<canvas id="game"></canvas>
+</div>
+<div id="game-ui" class="mt-4 text-white text-center">
+<div id="score" class="text-xl">Score: 0</div>
+<div id="lives" class="text-xl">Lives: 3</div>
+</div>
+</main>
+<script>
+    const config = {
+        type: Phaser.AUTO,
+        width: 800,
+        height: 600,
+        parent: 'game-container',
+        physics: {
+            default: 'arcade',
+            arcade: {
+                gravity: { y: 300 },
+                debug: false
+            }
+        },
+        scene: {
+            preload: preload,
+            create: create,
+            update: update
+        }
+    };
+
+    const game = new Phaser.Game(config);
+    let player;
+    let platforms;
+    let coins;
+    let score = 0;
+    let lives = 3;
+    let scoreText;
+    let gameState = 'playing';
+
+    function preload() {
+        this.load.svg('player', 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiI+PGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iMTQiIGZpbGw9IiM4QjVDRjYiLz48L3N2Zz4=');
+        this.load.svg('platform', 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMjAiPjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMjAiIGZpbGw9IiMzNzM3MzciLz48L3N2Zz4=');
+        this.load.svg('coin', 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PGNpcmNsZSBjeD0iOCIgY3k9IjgiIHI9IjYiIGZpbGw9IiNGRkQ3MDAiLz48L3N2Zz4=');
+    }
+
+    function create() {
+        platforms = this.physics.add.staticGroup();
+        platforms.create(400, 568, 'platform').setScale(8, 1).refreshBody();
+        platforms.create(600, 400, 'platform');
+        platforms.create(50, 250, 'platform');
+        platforms.create(750, 220, 'platform');
+
+        player = this.physics.add.sprite(100, 450, 'player');
+        player.setBounce(0.2);
+        player.setCollideWorldBounds(true);
+
+        coins = this.physics.add.group({
+            key: 'coin',
+            repeat: 11,
+            setXY: { x: 12, y: 0, stepX: 70 }
+        });
+
+        coins.children.iterate(function (child) {
+            child.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
+        });
+
+        this.physics.add.collider(player, platforms);
+        this.physics.add.collider(coins, platforms);
+        this.physics.add.overlap(player, coins, collectCoin, null, this);
+
+        cursors = this.input.keyboard.createCursorKeys();
+        scoreText = this.add.text(16, 16, 'Score: 0', { fontSize: '32px', fill: '#fff' });
+    }
+
+    function update() {
+        if (gameState === 'playing') {
+            if (cursors.left.isDown) {
+                player.setVelocityX(-160);
+            } else if (cursors.right.isDown) {
+                player.setVelocityX(160);
+            } else {
+                player.setVelocityX(0);
+            }
+
+            if (cursors.up.isDown && player.body.touching.down) {
+                player.setVelocityY(-330);
+            }
+        }
+    }
+
+    function collectCoin(player, coin) {
+        coin.disableBody(true, true);
+        score += 10;
+        scoreText.setText('Score: ' + score);
+
+        if (coins.countActive(true) === 0) {
+            gameState = 'won';
+            this.add.text(300, 300, 'You Win!', { fontSize: '64px', fill: '#fff' });
+        }
+    }
+
+    document.getElementById('wallet-connect').addEventListener('click', async () => {
+        if (typeof window.ethereum !== 'undefined') {
+            try {
+                await window.ethereum.request({ method: 'eth_requestAccounts' });
+                document.getElementById('wallet-connect').textContent = 'Connected';
+            } catch (error) {
+                console.error(error);
+            }
+        } else {
+            alert('Please install MetaMask!');
+        }
+    });
+    </script>
+</body>
+</html>
